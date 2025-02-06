@@ -5,7 +5,7 @@ account: antonios_lioutas@hms.harvard.edu
 server: wulab.connect.hms.harvard.edu
 hostUrl: https://wulab.connect.hms.harvard.edu/__api__
 appId: 54
-bundleId: 180
+bundleId: 181
 url: https://wulab.connect.hms.harvard.edu/barcodes_used/
 version: 1
 asMultiple: FALSE

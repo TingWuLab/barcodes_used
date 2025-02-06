@@ -79,8 +79,8 @@ ui <- fluidPage(
            tags$h4(style = "font-weight: bold; background-color: #A8D5E2;", 
                    textOutput("out_txt"))
            ),
-           column(4, uiOutput("copy_btn")),#actionButton("copy_btn", icon = icon("copy"), "Copy match _0/1_ vector to clipboard")), # initially hidden in the server logic
            column(4, uiOutput("copy_idx_btn")),#actionButton("copy_idx_btn", icon = icon("copy"), "Copy match _index_ vector to clipboard")), # initially hidden in the server logic
+           column(4, uiOutput("copy_btn")),#actionButton("copy_btn", icon = icon("copy"), "Copy match _0/1_ vector to clipboard")), # initially hidden in the server logic
            br(),
            br()),
            br(),
@@ -118,7 +118,7 @@ server <- function(input, output, session) {
     
     # Initialize the output data frame
     out_df <- tibble(
-      idx = NA_character_,
+      index = NA_character_,
       barcodes = barcodes,
       query = NA_character_,
       match = NA_real_
@@ -136,7 +136,7 @@ server <- function(input, output, session) {
       }
     }
     
-    out_df$idx <- 1:nrow(out_df)
+    out_df$index <- 1:nrow(out_df)
     
     print(head(out_df, 50))
     return(out_df)
@@ -169,7 +169,7 @@ server <- function(input, output, session) {
   
   output$copy_idx_btn <- renderUI({
     req(uploaded_sequences())
-    copy_data <- uploaded_sequences()$idx[uploaded_sequences()$match == 1]
+    copy_data <- paste(uploaded_sequences()$index[uploaded_sequences()$match == 1], collapse = ",")
     rclipButton("copy_idx_btnn", icon = icon("clipboard"), label= "Copy match _index_ vector to clipboard", clipText = copy_data)
   })
   
