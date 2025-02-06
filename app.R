@@ -51,9 +51,9 @@ ui <- fluidPage(
   useShinyjs(),  
   
   h1("Used barcodes"),
-  helpText("This app helps you query your barcodes to a list of available barcodes, and copy a 'match' vector to clipboard. (1 = match, 0 = no match)"),
-  helpText("The input query file to upload should only contains a column with your query sequences. (accepted files: .txt .csv .tsv)"),
-    br(),
+  helpText(".Upload your query file with a single column of sequences. Accepted formats: .txt, .csv, .tsv."),
+  helpText(".Easily compare your barcodes against the selected list: copy a 'match' vector (1 for match, 0 for no match) or copy indexes of matched barcodes directly to your clipboard."),
+  br(),
   
   fluidRow(
     column(2,
@@ -72,10 +72,19 @@ ui <- fluidPage(
   ),
   fluidRow(
     column(12,
-           dataTableOutput("out_df"),
-           
-           actionButton("copy_btn", icon = icon("copy"), "Copy match vector to clipboard") # initially hidden in the server logic
-    )
+           style = "background-color: #A8D5E2;",
+           br(),
+    column(4,
+           tags$h4(style = "font-weight: bold; background-color: #A8D5E2;", 
+                   textOutput("out_txt"))
+           ),
+           column(4, actionButton("copy_btn", icon = icon("copy"), "Copy match _0/1_ vector to clipboard")), # initially hidden in the server logic
+           column(4, actionButton("copy_idx_btn", icon = icon("copy"), "Copy match _index_ vector to clipboard")), # initially hidden in the server logic
+           br(),
+           br()),
+           br(),
+           dataTableOutput("out_df")
+    
   )
 )
 
@@ -83,6 +92,7 @@ server <- function(input, output, session) {
   
   observe({
     shinyjs::toggle("copy_btn", condition = !is.null(input$query_list))
+    shinyjs::toggle("copy_idx_btn", condition = !is.null(input$query_list))
   })
   
   streets_query <- reactive({
@@ -98,15 +108,34 @@ server <- function(input, output, session) {
   
   uploaded_sequences <- reactive({
     req(input$query_list)
+    # Load the sequences from the input file
     df <- read.table(input$query_list$datapath, header = FALSE)
+    query_seqs <- df[, 1]
     
-    query_output <- streets_query() %in% df[,1]
+    # Get barcodes using your streets_query function
+    barcodes <- streets_query()
     
-    out_df <- tibble(barcodes = streets_query() ,
-                     query = NA,
-                     match = as.numeric(query_output))
+    # Initialize the output data frame
+    out_df <- tibble(
+      idx = NA_character_,
+      barcodes = barcodes,
+      query = NA_character_,
+      match = NA_real_
+    )
     
-    out_df$query[query_output] <- df[,1]
+    # Match each barcode with the query sequence
+    for (i in seq_along(barcodes)) {
+      matched_idx <- which(barcodes[i] == query_seqs)
+      if (length(matched_idx) > 0) {
+        # Get the first match for simplicity
+        out_df$query[i] <- query_seqs[matched_idx[1]]
+        out_df$match[i] <- 1
+      } else {
+        out_df$match[i] <- 0
+      }
+    }
+    
+    out_df$idx <- 1:nrow(out_df)
     
     print(head(out_df, 50))
     return(out_df)
@@ -116,9 +145,28 @@ server <- function(input, output, session) {
     uploaded_sequences()
   })
   
+  match_n <- reactive({
+    req(input$query_list)
+    sum(uploaded_sequences()$match)
+  })
+  
+  total_n <- reactive({
+    req(input$query_list)
+    nrow(uploaded_sequences())
+  })
+  
+  output$out_txt <- renderText({
+    print(paste(match_n(), "matches out of", total_n()))
+  })
+  
   observeEvent(input$copy_btn, {
     copy_data <- uploaded_sequences()$match
-    clipr::write_clip(copy_data)
+    clipr::write_clip(copy_data, allow_non_interactive = TRUE)
+  })
+  
+  observeEvent(input$copy_idx_btn, {
+    copy_data <- uploaded_sequences()$idx[uploaded_sequences()$match == 1]
+    clipr::write_clip(copy_data, allow_non_interactive = TRUE)
   })
   
 }
