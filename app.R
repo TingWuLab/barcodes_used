@@ -1,9 +1,9 @@
-library(shiny)
-library(shinyjs)
-library(dplyr)
-library(readr)
-library(tibble)
-library(clipr)
+require(shiny)
+require(shinyjs)
+require(dplyr)
+require(readr)
+require(tibble)
+library(rclipboard)
 
 os_street_barcodes <- data.frame(
   Name = c("3K - hg38 mm10 dm6 wuhCor1 loxafr3 ce11",
@@ -49,6 +49,7 @@ os_toes_barcodes <- data.frame(
 
 ui <- fluidPage(
   useShinyjs(),  
+  rclipboardSetup(),
   
   h1("Used barcodes"),
   helpText(".Upload your query file with a single column of sequences. Accepted formats: .txt, .csv, .tsv."),
@@ -78,8 +79,8 @@ ui <- fluidPage(
            tags$h4(style = "font-weight: bold; background-color: #A8D5E2;", 
                    textOutput("out_txt"))
            ),
-           column(4, actionButton("copy_btn", icon = icon("copy"), "Copy match _0/1_ vector to clipboard")), # initially hidden in the server logic
-           column(4, actionButton("copy_idx_btn", icon = icon("copy"), "Copy match _index_ vector to clipboard")), # initially hidden in the server logic
+           column(4, uiOutput("copy_btn")),#actionButton("copy_btn", icon = icon("copy"), "Copy match _0/1_ vector to clipboard")), # initially hidden in the server logic
+           column(4, uiOutput("copy_idx_btn")),#actionButton("copy_idx_btn", icon = icon("copy"), "Copy match _index_ vector to clipboard")), # initially hidden in the server logic
            br(),
            br()),
            br(),
@@ -90,10 +91,10 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
-  observe({
-    shinyjs::toggle("copy_btn", condition = !is.null(input$query_list))
-    shinyjs::toggle("copy_idx_btn", condition = !is.null(input$query_list))
-  })
+  # observe({
+  #   shinyjs::toggle("copy_btn", condition = !is.null(input$query_list))
+  #   shinyjs::toggle("copy_idx_btn", condition = !is.null(input$query_list))
+  # })
   
   streets_query <- reactive({
     if(input$s_t == "with_toe"){
@@ -159,15 +160,33 @@ server <- function(input, output, session) {
     print(paste(match_n(), "matches out of", total_n()))
   })
   
-  observeEvent(input$copy_btn, {
-    copy_data <- uploaded_sequences()$match
-    clipr::write_clip(copy_data, allow_non_interactive = TRUE)
+  
+  output$copy_btn <- renderUI({
+    req(uploaded_sequences())
+      copy_data <- uploaded_sequences()$match
+      rclipButton("copy_btnn", icon = icon("clipboard"), label= "Copy match _0/1_ vector to clipboard", clipText = copy_data)
   })
   
-  observeEvent(input$copy_idx_btn, {
+  output$copy_idx_btn <- renderUI({
+    req(uploaded_sequences())
     copy_data <- uploaded_sequences()$idx[uploaded_sequences()$match == 1]
-    clipr::write_clip(copy_data, allow_non_interactive = TRUE)
+    rclipButton("copy_idx_btnn", icon = icon("clipboard"), label= "Copy match _index_ vector to clipboard", clipText = copy_data)
   })
+  
+  
+  
+  
+  # observeEvent(input$copy_btn, {
+  #   copy_data <- uploaded_sequences()$match
+  #   rclipButton("goButton", label= "Go!", clipText = tibble(iris))
+  #   clipr::write_clip(copy_data, allow_non_interactive = TRUE)
+  # })
+  # 
+  # observeEvent(input$copy_idx_btn, {
+  #   copy_data <- uploaded_sequences()$idx[uploaded_sequences()$match == 1]
+  #   rclipButton("goButton", label= "Go!", clipText = tibble(iris))
+  #   clipr::write_clip(copy_data, allow_non_interactive = TRUE)
+  # })
   
 }
 
